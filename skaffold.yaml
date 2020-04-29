@@ -19,13 +19,6 @@ test:
     structureTests: [./test/structure-tests-netcore.yaml]
   - image: gcr.io/gcp-dev-tools/duct-tape/nodejs
     structureTests: [./test/structure-tests-nodejs.yaml]
-deploy:
-  kubectl:
-    manifests:
-      # launches a busybox image with the duct-tape images as initContainers
-      # and lists the contents of /dbg: it should list out the top-level
-      # values from the initContainers
-      - test/k8s-test-installation.yaml
 
 profiles:
   # local: builds to local daemon only
@@ -33,6 +26,31 @@ profiles:
     build:
       local:
         push: false
+
+  - name: test
+    patches:
+      - op: add
+        path: /build/artifacts/-
+        value:
+          image: go113
+          context: test/goapp
+          docker:
+            buildArgs:
+              GOVERSION: 1.13
+      - op: add
+        path: /build/artifacts/-
+        value:
+          image: go114
+          context: test/goapp
+          docker:
+            buildArgs:
+              GOVERSION: 1.14
+    deploy:
+      kubectl:
+        manifests:
+          - test/k8s-test-installation.yaml
+          - test/k8s-go113-connect-job.yaml
+          - test/k8s-go114-connect-job.yaml
 
   # prod: pushes images to production with :latest
   - name: prod
